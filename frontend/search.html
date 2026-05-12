@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="dark">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>QuizForge — البحث</title>
+  <link rel="stylesheet" href="css/shared.css"/>
+  <style>
+    .page-content { padding: 0 0 60px; }
+    .search-box { display:flex; gap:10px; margin-bottom:12px; }
+    .search-box .form-control { flex:1; padding:13px 18px; font-size:1rem; }
+    .search-filters { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:28px; }
+    .filter-chip { padding:6px 16px; border-radius:20px; border:1px solid var(--border); background:var(--surface); color:var(--text2); font-size:.78rem; font-weight:700; cursor:pointer; transition:var(--t); }
+    .filter-chip.active, .filter-chip:hover { border-color:var(--blue); color:var(--blue); background:rgba(79,139,255,.1); }
+    .results-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+    .results-count { font-size:.82rem; color:var(--text3); font-weight:700; }
+    .q-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r-md); padding:20px; margin-bottom:12px; transition:var(--t); animation:fadeUp .3s ease both; }
+    .q-card:hover { border-color:var(--border2); box-shadow:var(--shadow); }
+    .q-card-header { display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+    .q-text { font-family:'Cairo',sans-serif; font-size:.96rem; font-weight:700; line-height:1.55; margin-bottom:14px; }
+    .q-options { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .q-opt { padding:8px 12px; background:var(--surface2); border:1px solid var(--border); border-radius:var(--r-sm); font-size:.82rem; display:flex; align-items:center; gap:8px; }
+    .q-opt.correct-opt { border-color:var(--green); background:rgba(16,185,129,.1); color:var(--green); }
+    .opt-ltr { width:24px;height:24px;border-radius:6px;background:rgba(255,255,255,.06);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:800;color:var(--text3);flex-shrink:0; }
+    @media(max-width:480px) { .q-options { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+
+  <div class="page-content" style="position:relative;z-index:1">
+    <div class="container">
+      <div class="page-header fade-up">
+        <div class="page-eyebrow">قاعدة الأسئلة</div>
+        <h1 class="page-title">البحث في الأسئلة</h1>
+        <p class="page-desc">ابحث في جميع الأسئلة عبر المواضيع المختلفة</p>
+      </div>
+
+      <div class="fade-up fade-up-1">
+        <div class="search-box">
+          <input class="form-control" id="searchInput" type="text" placeholder="ابحث عن سؤال، مفهوم، أو كلمة مفتاحية..."/>
+          <button class="btn btn-primary" id="searchBtn">🔍 بحث</button>
+        </div>
+        <div class="search-filters">
+          <button class="filter-chip active" data-subject="">الكل</button>
+          <button class="filter-chip" data-subject="html">🧱 HTML</button>
+          <button class="filter-chip" data-subject="css">🎨 CSS</button>
+          <button class="filter-chip" data-subject="javascript">⚡ JavaScript</button>
+        </div>
+      </div>
+
+      <div id="state"></div>
+      <div id="resultsWrap" style="display:none">
+        <div class="results-header">
+          <span id="resultsCount" class="results-count"></span>
+        </div>
+        <div id="resultsList"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+<script>
+const searchInput = document.getElementById('searchInput');
+const searchBtn   = document.getElementById('searchBtn');
+const stateEl     = document.getElementById('state');
+const resultsWrap = document.getElementById('resultsWrap');
+const resultsList = document.getElementById('resultsList');
+const resultsCount= document.getElementById('resultsCount');
+let activeSubject = '';
+let debounceTimer = null;
+
+const LETTERS  = ['أ','ب','ج','د'];
+const SUBJECTS = { html:'HTML', css:'CSS', javascript:'JavaScript' };
+const BADGE_COLORS = { html:'badge-amber', css:'badge-blue', javascript:'badge-purple' };
+
+// Filter chips
+document.querySelectorAll('.filter-chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    activeSubject = chip.dataset.subject;
+    if (searchInput.value.trim()) doSearch();
+  });
+});
+
+function setState(html) {
+  stateEl.innerHTML   = html;
+  resultsWrap.style.display = 'none';
+}
+
+function buildQuestionCard(q) {
+  const card = document.createElement('div');
+  card.className = 'q-card';
+
+  // Header: subject badge
+  const header = document.createElement('div');
+  header.className = 'q-card-header';
+  const badge = document.createElement('span');
+  badge.className = `badge ${BADGE_COLORS[q.subject] || 'badge-blue'}`;
+  // textContent — safe against any HTML in subject name
+  badge.textContent = SUBJECTS[q.subject] || q.subject;
+  header.appendChild(badge);
+
+  // Question text — textContent is MANDATORY here
+  // Questions may contain raw < > characters (e.g. HTML tag names as text)
+  // Using textContent ensures they render as characters, not HTML
+  const qText = document.createElement('div');
+  qText.className = 'q-text';
+  qText.textContent = q.question;   // ← SAFE: never innerHTML
+
+  // Options
+  const optsEl = document.createElement('div');
+  optsEl.className = 'q-options';
+  (q.options || []).forEach((opt, i) => {
+    const optEl = document.createElement('div');
+    optEl.className = 'q-opt' + (i === q.correct ? ' correct-opt' : '');
+
+    const ltr = document.createElement('span');
+    ltr.className   = 'opt-ltr';
+    ltr.textContent = LETTERS[i];   // ← safe
+
+    const txt = document.createElement('span');
+    txt.textContent = opt;          // ← SAFE: textContent, not innerHTML
+
+    optEl.appendChild(ltr);
+    optEl.appendChild(txt);
+    optsEl.appendChild(optEl);
+  });
+
+  card.appendChild(header);
+  card.appendChild(qText);
+  card.appendChild(optsEl);
+  return card;
+}
+
+async function doSearch() {
+  const q = searchInput.value.trim();
+  if (!q) { setState(''); return; }
+
+  setState('<div class="loading-wrap"><div class="spinner"></div><span>جاري البحث...</span></div>');
+
+  try {
+    const params = new URLSearchParams({ q, limit: 30 });
+    if (activeSubject) params.set('subject', activeSubject);
+    const data = await API.get('/api/questions/search?' + params);
+
+    if (!data.questions.length) {
+      setState(`<div class="empty"><div class="empty-icon">🔍</div><div class="empty-title">لا توجد نتائج لـ "${q}"</div><p style="color:var(--text3);font-size:.85rem">جرّب كلمات مختلفة أو قم بإزالة فلتر الموضوع</p></div>`);
+      return;
+    }
+
+    stateEl.innerHTML = '';
+    resultsWrap.style.display = 'block';
+    resultsCount.textContent  = `${data.total} نتيجة لـ "${q}"`;
+    resultsList.innerHTML = '';
+    data.questions.forEach(q => resultsList.appendChild(buildQuestionCard(q)));
+
+  } catch (err) {
+    setState(`<div class="alert alert-error">⚠️ ${err.message}</div>`);
+  }
+}
+
+searchBtn.addEventListener('click', doSearch);
+searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
+
+// Live search with debounce
+searchInput.addEventListener('input', () => {
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(doSearch, 400);
+});
+</script>
+</body>
+</html>

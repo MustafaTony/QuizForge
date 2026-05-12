@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="dark">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>QuizForge — لوحة الأدمن</title>
+  <link rel="stylesheet" href="css/shared.css"/>
+  <style>
+    .page-content { padding: 0 0 60px; }
+    .toolbar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:24px; }
+    .toolbar-left { display:flex; gap:8px; align-items:center; flex:1; flex-wrap:wrap; }
+    .q-count { font-size:.82rem; color:var(--text3); font-weight:700; }
+
+    /* Question row in table */
+    .q-preview { max-width:340px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:.85rem; }
+    .actions-cell { display:flex; gap:6px; }
+
+    /* Modal form */
+    .options-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .option-wrap { position:relative; }
+    .option-label { position:absolute; top:50%; right:12px; transform:translateY(-50%); font-size:.75rem; font-weight:800; color:var(--text3); pointer-events:none; }
+    .option-wrap .form-control { padding-right:32px; }
+    .correct-selector { display:flex; gap:8px; flex-wrap:wrap; }
+    .correct-btn { width:42px;height:42px;border-radius:var(--r-sm);border:1px solid var(--border);background:var(--surface);color:var(--text2);font-size:.85rem;font-weight:800;cursor:pointer;transition:var(--t);display:flex;align-items:center;justify-content:center; }
+    .correct-btn.selected { background:rgba(16,185,129,.15);border-color:var(--green);color:var(--green); }
+    @media(max-width:480px) { .options-grid{grid-template-columns:1fr} }
+  </style>
+</head>
+<body>
+
+  <div class="page-content" style="position:relative;z-index:1">
+    <div class="container">
+
+      <div class="page-header fade-up">
+        <div class="page-eyebrow">إدارة المحتوى</div>
+        <h1 class="page-title">⚙️ لوحة الأدمن</h1>
+        <p class="page-desc">إضافة وتعديل وحذف أسئلة قاعدة البيانات</p>
+      </div>
+
+      <div id="authGuard"></div>
+
+      <div id="mainContent" style="display:none">
+        <div class="toolbar fade-up">
+          <div class="toolbar-left">
+            <select class="form-control" id="filterSubject" style="width:auto">
+              <option value="">كل المواضيع</option>
+              <option value="html">🧱 HTML</option>
+              <option value="css">🎨 CSS</option>
+              <option value="javascript">⚡ JavaScript</option>
+            </select>
+            <span class="q-count" id="qCount"></span>
+          </div>
+          <button class="btn btn-primary" id="addBtn">＋ إضافة سؤال</button>
+        </div>
+
+        <div id="alertBox"></div>
+        <div id="loadingWrap" class="loading-wrap"><div class="spinner"></div><span>جاري التحميل...</span></div>
+
+        <div class="table-wrap fade-up" id="tableWrap" style="display:none">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>السؤال</th>
+                <th>الموضوع</th>
+                <th>الحالة</th>
+                <th>الإجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Add/Edit Modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">إضافة سؤال جديد</div>
+      <button class="modal-close" id="modalClose">✕</button>
+    </div>
+    <div id="modalAlert"></div>
+
+    <input type="hidden" id="editId"/>
+
+    <div class="form-group">
+      <label class="form-label">الموضوع</label>
+      <select class="form-control" id="fSubject">
+        <option value="html">🧱 HTML</option>
+        <option value="css">🎨 CSS</option>
+        <option value="javascript">⚡ JavaScript</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">نص السؤال</label>
+      <textarea class="form-control" id="fQuestion" rows="3" placeholder="اكتب السؤال هنا..."></textarea>
+      <div class="form-error" id="fQuestionErr"></div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">الخيارات الأربعة</label>
+      <div class="options-grid" id="optionsGrid">
+        <div class="option-wrap"><span class="option-label">أ</span><input class="form-control" id="opt0" placeholder="الخيار الأول"/></div>
+        <div class="option-wrap"><span class="option-label">ب</span><input class="form-control" id="opt1" placeholder="الخيار الثاني"/></div>
+        <div class="option-wrap"><span class="option-label">ج</span><input class="form-control" id="opt2" placeholder="الخيار الثالث"/></div>
+        <div class="option-wrap"><span class="option-label">د</span><input class="form-control" id="opt3" placeholder="الخيار الرابع"/></div>
+      </div>
+      <div class="form-error" id="fOptsErr"></div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">الإجابة الصحيحة</label>
+      <div class="correct-selector" id="correctSelector">
+        <button class="correct-btn" data-idx="0">أ</button>
+        <button class="correct-btn" data-idx="1">ب</button>
+        <button class="correct-btn" data-idx="2">ج</button>
+        <button class="correct-btn" data-idx="3">د</button>
+      </div>
+      <div class="form-error" id="fCorrectErr"></div>
+    </div>
+
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
+      <button class="btn btn-ghost" id="cancelBtn">إلغاء</button>
+      <button class="btn btn-primary" id="saveBtn">💾 حفظ</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+<script>
+const SUBJECTS = { html:'HTML 🧱', css:'CSS 🎨', javascript:'JavaScript ⚡' };
+const BADGE_C  = { html:'badge-amber', css:'badge-blue', javascript:'badge-purple' };
+
+let allQuestions = [];
+let selectedCorrect = -1;
+
+// ── Auth guard ────────────────────────────────────────────────
+if (!API.isAdmin()) {
+  document.getElementById('authGuard').innerHTML =
+    '<div class="alert alert-error">⛔ هذه الصفحة للأدمن فقط. <a href="login.html" style="color:var(--blue)">تسجيل الدخول</a></div>';
+  document.getElementById('loadingWrap').style.display = 'none';
+} else {
+  document.getElementById('mainContent').style.display = 'block';
+  loadQuestions();
+}
+
+// ── Load questions ────────────────────────────────────────────
+async function loadQuestions() {
+  document.getElementById('loadingWrap').style.display = 'flex';
+  document.getElementById('tableWrap').style.display   = 'none';
+  try {
+    const subject = document.getElementById('filterSubject').value;
+    const path    = '/api/questions/all' + (subject ? `?subject=${subject}` : '');
+    const data    = await API.get(path);
+    allQuestions  = data.questions;
+    renderTable(allQuestions);
+  } catch (err) {
+    showAlert(err.message, 'error');
+  } finally {
+    document.getElementById('loadingWrap').style.display = 'none';
+  }
+}
+
+function renderTable(rows) {
+  document.getElementById('qCount').textContent = `${rows.length} سؤال`;
+  document.getElementById('tableWrap').style.display = rows.length ? 'block' : 'none';
+
+  if (!rows.length) {
+    document.getElementById('tableWrap').style.display = 'none';
+    document.getElementById('alertBox').innerHTML =
+      '<div class="alert alert-info">📭 لا توجد أسئلة في هذه الفئة.</div>';
+    return;
+  }
+
+  const tbody = document.getElementById('tableBody');
+  tbody.innerHTML = '';
+  rows.forEach((q, i) => {
+    const tr = document.createElement('tr');
+
+    // Number
+    const tdNum = document.createElement('td');
+    tdNum.textContent = i + 1;
+    tdNum.style.color = 'var(--text3)';
+
+    // Question preview — textContent mandatory (may contain < > chars)
+    const tdQ = document.createElement('td');
+    const preview = document.createElement('div');
+    preview.className = 'q-preview';
+    preview.title     = q.question;    // tooltip
+    preview.textContent = q.question;  // ← SAFE
+    tdQ.appendChild(preview);
+
+    // Subject badge
+    const tdSub = document.createElement('td');
+    const badge = document.createElement('span');
+    badge.className   = `badge ${BADGE_C[q.subject]||'badge-blue'}`;
+    badge.textContent = SUBJECTS[q.subject] || q.subject;  // safe
+    tdSub.appendChild(badge);
+
+    // Active status
+    const tdActive = document.createElement('td');
+    const statusBadge = document.createElement('span');
+    statusBadge.className   = `badge ${q.active ? 'badge-green' : 'badge-red'}`;
+    statusBadge.textContent = q.active ? 'نشط' : 'معطّل';
+    tdActive.appendChild(statusBadge);
+
+    // Actions
+    const tdAct = document.createElement('td');
+    const actWrap = document.createElement('div');
+    actWrap.className = 'actions-cell';
+
+    const editBtn = document.createElement('button');
+    editBtn.className   = 'btn btn-ghost btn-sm';
+    editBtn.textContent = '✏️ تعديل';
+    editBtn.addEventListener('click', () => openEdit(q));
+
+    const toggleBtn = document.createElement('button');
+    toggleBtn.className   = `btn btn-sm ${q.active ? 'btn-danger' : 'btn-success'}`;
+    toggleBtn.textContent = q.active ? '🔕 تعطيل' : '✅ تفعيل';
+    toggleBtn.addEventListener('click', () => toggleActive(q));
+
+    actWrap.appendChild(editBtn);
+    actWrap.appendChild(toggleBtn);
+    tdAct.appendChild(actWrap);
+
+    tr.appendChild(tdNum); tr.appendChild(tdQ); tr.appendChild(tdSub);
+    tr.appendChild(tdActive); tr.appendChild(tdAct);
+    tbody.appendChild(tr);
+  });
+}
+
+async function toggleActive(q) {
+  try {
+    await API.put(`/api/questions/${q._id}`, { active: !q.active });
+    showAlert(`تم ${q.active ? 'تعطيل' : 'تفعيل'} السؤال بنجاح`, 'success');
+    loadQuestions();
+  } catch (err) { showAlert(err.message, 'error'); }
+}
+
+// ── Modal helpers ─────────────────────────────────────────────
+function openModal(title) {
+  document.getElementById('modalTitle').textContent = title;
+  document.getElementById('modalOverlay').classList.add('open');
+  document.getElementById('modalAlert').innerHTML = '';
+  clearFieldErrors();
+}
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+  resetForm();
+}
+function resetForm() {
+  document.getElementById('editId').value    = '';
+  document.getElementById('fSubject').value  = 'html';
+  document.getElementById('fQuestion').value = '';
+  [0,1,2,3].forEach(i => { document.getElementById(`opt${i}`).value = ''; });
+  setCorrect(-1);
+}
+function setCorrect(idx) {
+  selectedCorrect = idx;
+  document.querySelectorAll('.correct-btn').forEach(b => {
+    b.classList.toggle('selected', parseInt(b.dataset.idx) === idx);
+  });
+}
+function clearFieldErrors() {
+  ['fQuestionErr','fOptsErr','fCorrectErr'].forEach(id => {
+    const el = document.getElementById(id);
+    el.textContent = ''; el.classList.remove('show');
+  });
+}
+function fieldErr(id, msg) {
+  const el = document.getElementById(id);
+  el.textContent = msg; el.classList.toggle('show', !!msg);
+}
+function showModalAlert(msg, type='error') {
+  document.getElementById('modalAlert').innerHTML = `<div class="alert alert-${type}">${msg}</div>`;
+}
+
+document.getElementById('addBtn').addEventListener('click', () => {
+  resetForm();
+  openModal('إضافة سؤال جديد');
+});
+
+function openEdit(q) {
+  resetForm();
+  document.getElementById('editId').value    = q._id;
+  document.getElementById('fSubject').value  = q.subject;
+  document.getElementById('fQuestion').value = q.question;
+  (q.options || []).forEach((opt, i) => {
+    const el = document.getElementById(`opt${i}`);
+    if (el) el.value = opt;
+  });
+  setCorrect(q.correct);
+  openModal('تعديل السؤال');
+}
+
+document.querySelectorAll('.correct-btn').forEach(b => {
+  b.addEventListener('click', () => setCorrect(parseInt(b.dataset.idx)));
+});
+
+[document.getElementById('modalClose'), document.getElementById('cancelBtn')].forEach(el => {
+  el.addEventListener('click', closeModal);
+});
+document.getElementById('modalOverlay').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeModal();
+});
+
+// ── Save (create or update) ───────────────────────────────────
+document.getElementById('saveBtn').addEventListener('click', async () => {
+  clearFieldErrors();
+  document.getElementById('modalAlert').innerHTML = '';
+
+  const editId   = document.getElementById('editId').value;
+  const subject  = document.getElementById('fSubject').value;
+  const question = document.getElementById('fQuestion').value.trim();
+  const options  = [0,1,2,3].map(i => document.getElementById(`opt${i}`).value.trim());
+
+  let valid = true;
+  if (!question || question.length < 5) { fieldErr('fQuestionErr', 'يرجى كتابة نص السؤال (5 أحرف على الأقل)'); valid = false; }
+  if (options.some(o => !o))             { fieldErr('fOptsErr',     'يرجى ملء جميع الخيارات الأربعة'); valid = false; }
+  if (selectedCorrect === -1)            { fieldErr('fCorrectErr',  'يرجى اختيار الإجابة الصحيحة'); valid = false; }
+  if (!valid) return;
+
+  const saveBtn = document.getElementById('saveBtn');
+  saveBtn.disabled    = true;
+  saveBtn.textContent = '...جاري الحفظ';
+
+  try {
+    const body = { subject, question, options, correct: selectedCorrect };
+    if (editId) {
+      await API.put(`/api/questions/${editId}`, body);
+      showAlert('تم تحديث السؤال بنجاح ✅', 'success');
+    } else {
+      await API.post('/api/questions', body);
+      showAlert('تمت إضافة السؤال بنجاح ✅', 'success');
+    }
+    closeModal();
+    loadQuestions();
+  } catch (err) {
+    showModalAlert(err.message || 'حدث خطأ أثناء الحفظ');
+  } finally {
+    saveBtn.disabled    = false;
+    saveBtn.textContent = '💾 حفظ';
+  }
+});
+
+document.getElementById('filterSubject').addEventListener('change', loadQuestions);
+
+function showAlert(msg, type='error') {
+  document.getElementById('alertBox').innerHTML = `<div class="alert alert-${type}">${msg}</div>`;
+  setTimeout(() => { document.getElementById('alertBox').innerHTML = ''; }, 4000);
+}
+</script>
+</body>
+</html>

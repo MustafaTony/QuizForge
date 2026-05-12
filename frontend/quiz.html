@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="dark">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>QuizForge — الاختبار</title>
+  <link rel="stylesheet" href="css/shared.css"/>
+  <link rel="stylesheet" href="css/quiz.css"/>
+</head>
+<body>
+
+  <div style="position:relative;z-index:1;padding:24px 16px 48px;max-width:720px;margin:0 auto">
+
+    <!-- Topbar -->
+    <div class="quiz-topbar">
+      <a class="back-btn" href="index.html"><span>→</span><span>العودة</span></a>
+      <div class="subject-pill" id="subjectPill">HTML</div>
+    </div>
+
+    <!-- Progress + Timer -->
+    <div class="progress-row">
+      <div class="progress-info">
+        <div class="progress-label">
+          <span id="progressLabel">السؤال 1 من 12</span>
+          <span id="scoreLabel">0 ✓</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+      </div>
+      <div class="timer-wrap">
+        <svg class="timer-svg" viewBox="0 0 62 62" xmlns="http://www.w3.org/2000/svg">
+          <circle class="t-track" cx="31" cy="31" r="26"/>
+          <circle id="timer-ring" cx="31" cy="31" r="26"/>
+        </svg>
+        <div class="timer-num" id="timerNum">15</div>
+      </div>
+    </div>
+
+    <!-- Question Card -->
+    <div class="question-card glass-card" id="questionCard">
+      <div class="q-number" id="qNumber">السؤال 01</div>
+      <div class="q-text" id="qText">جاري تحميل الأسئلة...</div>
+    </div>
+
+    <!-- Options -->
+    <div class="options-grid" id="optionsGrid"></div>
+
+    <!-- Next Button -->
+    <button class="next-btn" id="nextBtn">
+      <span id="nextLabel">السؤال التالي ←</span>
+    </button>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

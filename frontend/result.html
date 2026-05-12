@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="dark">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>QuizForge — النتيجة</title>
+  <link rel="stylesheet" href="css/shared.css"/>
+  <link rel="stylesheet" href="css/quiz.css"/>
+</head>
+<body>
+
+  <div style="position:relative;z-index:1;padding:24px 16px 60px;max-width:720px;margin:0 auto">
+    <div class="result-wrap">
+      <div class="result-card glass-card">
+
+        <div class="result-eyebrow" id="eyebrow">اكتمل الاختبار · HTML</div>
+
+        <!-- Score Ring -->
+        <div class="score-ring-wrap">
+          <svg class="score-svg" viewBox="0 0 180 180" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="rg" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%"   stop-color="#4f8bff"/>
+                <stop offset="50%"  stop-color="#a855f7"/>
+                <stop offset="100%" stop-color="#06b6d4"/>
+              </linearGradient>
+            </defs>
+            <circle class="s-track" cx="90" cy="90" r="75"/>
+            <circle class="s-fill" id="sFill" cx="90" cy="90" r="75"/>
+          </svg>
+          <div class="score-inner">
+            <div class="score-num" id="scoreNum">0/12</div>
+            <div class="score-pct" id="scorePct">0%</div>
+          </div>
+        </div>
+
+        <div class="result-badge" id="resultBadge">جاري الحساب...</div>
+        <p class="result-msg" id="resultMsg"></p>
+
+        <!-- Stats -->
+        <div class="stats-row">
+          <div class="stat-box">
+            <div class="stat-val green" id="correctCount">0</div>
+            <div class="stat-label">إجابة صحيحة ✓</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-val red" id="wrongCount">0</div>
+            <div class="stat-label">إجابة خاطئة ✗</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-val blue" id="pctStat">0%</div>
+            <div class="stat-label">النسبة المئوية</div>
+          </div>
+        </div>
+
+        <!-- Bar -->
+        <div class="result-bar-track">
+          <div id="res-bar"></div>
+        </div>
+
+        <!-- Actions -->
+        <div class="result-actions">
+          <button class="btn-ghost" id="homeBtn">🏠 الرئيسية</button>
+          <button class="btn-solid" id="retryBtn">↺ إعادة الاختبار</button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/result.js"></script>
+</body>
+</html>

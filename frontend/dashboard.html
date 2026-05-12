@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="dark">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>QuizForge — Dashboard</title>
+  <link rel="stylesheet" href="css/shared.css"/>
+  <style>
+    .page-content { padding: 0 0 48px; }
+    .stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:14px; margin-bottom:28px; }
+    .subject-bars { display:flex; flex-direction:column; gap:14px; }
+    .bar-row { display:flex; flex-direction:column; gap:7px; }
+    .bar-header { display:flex; justify-content:space-between; align-items:center; font-size:.85rem; font-weight:700; }
+    .bar-track { height:10px; background:var(--surface2); border-radius:5px; overflow:hidden; border:1px solid var(--border); }
+    .bar-fill { height:100%; border-radius:5px; transition:width 1.2s cubic-bezier(.4,0,.2,1); width:0%; }
+    .bar-fill.html-color   { background:linear-gradient(90deg,#f97316,#fb923c); }
+    .bar-fill.css-color    { background:linear-gradient(90deg,#3b82f6,#60a5fa); }
+    .bar-fill.js-color     { background:linear-gradient(90deg,#eab308,#fde047); }
+
+    .donut-wrap { display:flex; flex-direction:column; align-items:center; gap:16px; }
+    .donut-svg { width:180px; height:180px; }
+    .donut-legend { display:flex; flex-direction:column; gap:8px; width:100%; }
+    .legend-item { display:flex; align-items:center; gap:10px; font-size:.82rem; font-weight:600; }
+    .legend-dot { width:12px; height:12px; border-radius:50%; flex-shrink:0; }
+    .legend-pct { margin-right:auto; color:var(--text3); }
+
+    .recent-wrap { display:flex; flex-direction:column; gap:8px; }
+    .activity-item { display:flex; align-items:center; gap:12px; padding:10px 14px; background:var(--surface); border:1px solid var(--border); border-radius:var(--r-sm); font-size:.83rem; }
+    .activity-icon { font-size:1.1rem; }
+    .activity-text { flex:1; color:var(--text2); }
+    .activity-time { color:var(--text3); font-size:.75rem; }
+  </style>
+</head>
+<body>
+
+  <div class="page-content" style="position:relative;z-index:1">
+    <div class="container">
+
+      <div class="page-header fade-up">
+        <div class="page-eyebrow">إحصائيات النظام</div>
+        <h1 class="page-title">Dashboard</h1>
+        <p class="page-desc">نظرة شاملة على محتوى قاعدة الأسئلة والنشاط الحالي</p>
+      </div>
+
+      <div id="alertBox"></div>
+      <div id="loadingWrap" class="loading-wrap"><div class="spinner"></div><span>جاري تحميل البيانات...</span></div>
+      <div id="content" style="display:none">
+
+        <!-- Stat cards -->
+        <div class="stats-grid" id="statsGrid"></div>
+
+        <div class="grid-2" style="gap:20px;margin-bottom:28px">
+
+          <!-- Bar chart -->
+          <div class="card fade-up">
+            <div class="card-body">
+              <div class="card-subtitle">توزيع الأسئلة</div>
+              <div class="card-title">الأسئلة حسب الموضوع</div>
+              <div style="margin-top:20px" class="subject-bars" id="subjectBars"></div>
+            </div>
+          </div>
+
+          <!-- Donut chart -->
+          <div class="card fade-up fade-up-1">
+            <div class="card-body">
+              <div class="card-subtitle">حالة الأسئلة</div>
+              <div class="card-title">نشطة مقابل معطّلة</div>
+              <div style="margin-top:20px" class="donut-wrap">
+                <svg class="donut-svg" viewBox="0 0 180 180" id="donutSvg">
+                  <defs>
+                    <linearGradient id="gActive" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stop-color="#10b981"/>
+                      <stop offset="100%" stop-color="#06b6d4"/>
+                    </linearGradient>
+                    <linearGradient id="gInactive" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stop-color="#f43f5e"/>
+                      <stop offset="100%" stop-color="#f97316"/>
+                    </linearGradient>
+                  </defs>
+                  <circle cx="90" cy="90" r="70" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="22"/>
+                  <circle id="donutActive"   cx="90" cy="90" r="70" fill="none" stroke="url(#gActive)"   stroke-width="22" stroke-linecap="round" transform="rotate(-90 90 90)" style="transition:stroke-dashoffset 1.3s ease .2s"/>
+                  <circle id="donutInactive" cx="90" cy="90" r="70" fill="none" stroke="url(#gInactive)" stroke-width="22" stroke-linecap="round" transform="rotate(-90 90 90)" style="transition:stroke-dashoffset 1.3s ease .4s"/>
+                  <text x="90" y="84" text-anchor="middle" fill="var(--text)" font-family="Cairo,sans-serif" font-size="22" font-weight="900" id="donutNum">0</text>
+                  <text x="90" y="104" text-anchor="middle" fill="rgba(240,240,255,.45)" font-family="Cairo,sans-serif" font-size="11">إجمالي</text>
+                </svg>
+                <div class="donut-legend" id="donutLegend"></div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Subject detail cards -->
+        <div class="card fade-up fade-up-2">
+          <div class="card-body">
+            <div class="card-subtitle">تفاصيل المواضيع</div>
+            <div class="card-title" style="margin-bottom:20px">إحصائيات كل موضوع</div>
+            <div class="grid-3" id="subjectCards"></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+<script>
+(async () => {
+  // Guard: admin only
+  if (!API.isAdmin()) {
+    document.getElementById('alertBox').innerHTML = '<div class="alert alert-error">⛔ هذه الصفحة للأدمن فقط. <a href="login.html" style="color:var(--blue)">تسجيل الدخول</a></div>';
+    document.getElementById('loadingWrap').style.display = 'none';
+    return;
+  }
+
+  try {
+    const { stats } = await API.get('/api/dashboard/stats');
+    document.getElementById('loadingWrap').style.display = 'none';
+    document.getElementById('content').style.display = 'block';
+
+    const { totalQuestions, activeQuestions, inactiveQuestions, totalSubjects, bySubject } = stats;
+
+    // ── Stat cards ──────────────────────────────────────────
+    const statDefs = [
+      { icon:'📋', label:'إجمالي الأسئلة',   val: totalQuestions,   color:'blue'   },
+      { icon:'✅', label:'أسئلة نشطة',        val: activeQuestions,  color:'green'  },
+      { icon:'🔕', label:'أسئلة معطّلة',      val: inactiveQuestions,color:'red'    },
+      { icon:'📚', label:'عدد المواضيع',       val: totalSubjects,    color:'purple' },
+    ];
+    document.getElementById('statsGrid').innerHTML = statDefs.map(s => `
+      <div class="stat-card fade-up">
+        <div class="stat-icon ${s.color}">${s.icon}</div>
+        <div><div class="stat-val">${s.val}</div><div class="stat-label">${s.label}</div></div>
+      </div>`).join('');
+
+    // ── Subject bars ─────────────────────────────────────────
+    const SUBJECT_COLORS = { html:'html-color', css:'css-color', javascript:'js-color' };
+    const SUBJECT_LABELS = { html:'HTML', css:'CSS', javascript:'JavaScript' };
+    const barsEl = document.getElementById('subjectBars');
+    barsEl.innerHTML = '';
+    Object.entries(bySubject).forEach(([sub, data]) => {
+      const pct = totalQuestions ? Math.round((data.active / totalQuestions) * 100) : 0;
+      const row = document.createElement('div');
+      row.className = 'bar-row';
+      row.innerHTML = `
+        <div class="bar-header">
+          <span>${SUBJECT_LABELS[sub] || sub}</span>
+          <span style="color:var(--text3)">${data.active} سؤال نشط</span>
+        </div>
+        <div class="bar-track"><div class="bar-fill ${SUBJECT_COLORS[sub]||''}" data-pct="${pct}"></div></div>`;
+      barsEl.appendChild(row);
+    });
+    setTimeout(() => {
+      barsEl.querySelectorAll('.bar-fill').forEach(el => {
+        el.style.width = el.dataset.pct + '%';
+      });
+    }, 100);
+
+    // ── Donut ─────────────────────────────────────────────────
+    const CIRCUM = 2 * Math.PI * 70;
+    const activePct   = totalQuestions ? (activeQuestions   / totalQuestions) : 0;
+    const inactivePct = totalQuestions ? (inactiveQuestions / totalQuestions) : 0;
+    const dA = document.getElementById('donutActive');
+    const dI = document.getElementById('donutInactive');
+    dA.style.strokeDasharray = CIRCUM; dA.style.strokeDashoffset = CIRCUM;
+    dI.style.strokeDasharray = CIRCUM; dI.style.strokeDashoffset = CIRCUM;
+    document.getElementById('donutNum').textContent = totalQuestions;
+    setTimeout(() => {
+      dA.style.strokeDashoffset = CIRCUM - activePct   * CIRCUM;
+      dI.style.strokeDashoffset = CIRCUM - inactivePct * CIRCUM;
+      dI.style.strokeDasharray  = `${inactivePct * CIRCUM} ${CIRCUM}`;
+      // offset inactive to start after active arc
+      dI.setAttribute('transform', `rotate(${-90 + activePct * 360} 90 90)`);
+    }, 200);
+    document.getElementById('donutLegend').innerHTML = `
+      <div class="legend-item"><div class="legend-dot" style="background:#10b981"></div>نشطة<span class="legend-pct">${activeQuestions} (${Math.round(activePct*100)}%)</span></div>
+      <div class="legend-item"><div class="legend-dot" style="background:#f43f5e"></div>معطّلة<span class="legend-pct">${inactiveQuestions} (${Math.round(inactivePct*100)}%)</span></div>`;
+
+    // ── Subject detail cards ──────────────────────────────────
+    const ICONS = { html:'🧱', css:'🎨', javascript:'⚡' };
+    document.getElementById('subjectCards').innerHTML = Object.entries(bySubject).map(([sub, data]) => `
+      <div class="card" style="--card-c:var(--blue)">
+        <div class="card-body" style="text-align:center">
+          <div style="font-size:2.2rem;margin-bottom:10px">${ICONS[sub]||'📖'}</div>
+          <div style="font-family:Cairo,sans-serif;font-size:1.05rem;font-weight:800;margin-bottom:12px">${SUBJECT_LABELS[sub]||sub}</div>
+          <div style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap">
+            <div style="text-align:center"><div style="font-size:1.4rem;font-weight:900;color:var(--green)">${data.active}</div><div style="font-size:.72rem;color:var(--text3)">نشط</div></div>
+            <div style="text-align:center"><div style="font-size:1.4rem;font-weight:900;color:var(--red)">${data.total - data.active}</div><div style="font-size:.72rem;color:var(--text3)">معطّل</div></div>
+            <div style="text-align:center"><div style="font-size:1.4rem;font-weight:900;color:var(--blue)">${data.total}</div><div style="font-size:.72rem;color:var(--text3)">إجمالي</div></div>
+          </div>
+        </div>
+      </div>`).join('');
+
+  } catch (err) {
+    document.getElementById('loadingWrap').style.display = 'none';
+    document.getElementById('alertBox').innerHTML = `<div class="alert alert-error">⚠️ ${err.message}</div>`;
+  }
+})();
+</script>
+</body>
+</html>

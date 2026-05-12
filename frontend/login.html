@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="dark">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>QuizForge — تسجيل الدخول</title>
+  <link rel="stylesheet" href="css/shared.css"/>
+  <style>
+    body { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:24px; }
+    .auth-card { width:100%; max-width:420px; position:relative; z-index:1; }
+    .auth-card .card-body { padding:40px 36px; }
+    .auth-logo { text-align:center; margin-bottom:32px; }
+    .auth-logo .brand { font-family:'Cairo',sans-serif; font-size:2rem; font-weight:900; background:linear-gradient(135deg,var(--blue),var(--purple)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+    .auth-logo p { color:var(--text3); font-size:.85rem; margin-top:6px; }
+    .auth-footer { text-align:center; margin-top:20px; font-size:.85rem; color:var(--text3); }
+    .auth-footer a { color:var(--blue); text-decoration:none; font-weight:700; }
+    .submit-btn { width:100%; margin-top:6px; padding:14px; font-size:.95rem; }
+  </style>
+</head>
+<body>
+  <div class="bg-canvas"><div class="orb"></div><div class="orb"></div></div>
+
+  <div class="auth-card card fade-up">
+    <div class="card-body">
+      <div class="auth-logo">
+        <div class="brand">⚡ QuizForge</div>
+        <p>مرحباً بعودتك</p>
+      </div>
+
+      <div id="alertBox"></div>
+
+      <div class="form-group">
+        <label class="form-label" for="email">البريد الإلكتروني</label>
+        <input class="form-control" id="email" type="email" placeholder="example@email.com" autocomplete="email"/>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="password">كلمة المرور</label>
+        <input class="form-control" id="password" type="password" placeholder="••••••••" autocomplete="current-password"/>
+      </div>
+
+      <button class="btn btn-primary submit-btn" id="loginBtn">تسجيل الدخول</button>
+
+      <div class="auth-footer">
+        ليس لديك حساب؟ <a href="register.html">إنشاء حساب</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script>
+    // Redirect if already logged in
+    if (API.isLoggedIn()) window.location.href = 'index.html';
+
+    const alertBox  = document.getElementById('alertBox');
+    const loginBtn  = document.getElementById('loginBtn');
+    const emailEl   = document.getElementById('email');
+    const passEl    = document.getElementById('password');
+
+    function showAlert(msg, type = 'error') {
+      alertBox.innerHTML = `<div class="alert alert-${type}">${msg}</div>`;
+    }
+
+    async function doLogin() {
+      const email    = emailEl.value.trim();
+      const password = passEl.value;
+
+      if (!email || !password) { showAlert('يرجى ملء جميع الحقول'); return; }
+
+      loginBtn.disabled    = true;
+      loginBtn.textContent = '...جاري الدخول';
+
+      try {
+        const data = await API.post('/api/auth/login', { email, password });
+        API.saveAuth(data.token, data.user);
+        window.location.href = data.user.role === 'admin' ? 'dashboard.html' : 'index.html';
+      } catch (err) {
+        showAlert(err.message || 'خطأ في تسجيل الدخول');
+        loginBtn.disabled    = false;
+        loginBtn.textContent = 'تسجيل الدخول';
+      }
+    }
+
+    loginBtn.addEventListener('click', doLogin);
+    [emailEl, passEl].forEach(el => el.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); }));
+  </script>
+</body>
+</html>

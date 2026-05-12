@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="dark">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>QuizForge — المتصدرون</title>
+  <link rel="stylesheet" href="css/shared.css"/>
+  <style>
+    .page-content { padding: 0 0 60px; }
+    .tabs { display:flex; gap:8px; margin-bottom:28px; flex-wrap:wrap; }
+    .tab { padding:9px 22px; border-radius:var(--r-sm); border:1px solid var(--border); background:var(--surface); color:var(--text2); font-size:.85rem; font-weight:700; cursor:pointer; transition:var(--t); }
+    .tab.active { background:linear-gradient(135deg,var(--blue),var(--purple)); color:#fff; border-color:transparent; box-shadow:0 4px 16px rgba(79,139,255,.3); }
+    .rank-row { display:flex; align-items:center; gap:16px; padding:16px 20px; background:var(--surface); border:1px solid var(--border); border-radius:var(--r-md); transition:var(--t); animation:fadeUp .3s ease both; }
+    .rank-row:not(:last-child) { margin-bottom:10px; }
+    .rank-row:hover { border-color:var(--border2); transform:translateX(-4px); }
+    .rank-num { font-family:'Cairo',sans-serif; font-size:1.2rem; font-weight:900; min-width:36px; text-align:center; }
+    .rank-1 { color:var(--amber); }
+    .rank-2 { color:var(--text2); }
+    .rank-3 { color:#cd7f32; }
+    .rank-name { flex:1; font-weight:700; font-size:.95rem; }
+    .rank-score { font-family:'Cairo',sans-serif; font-size:1rem; font-weight:800; }
+    .rank-bar-wrap { width:100px; background:var(--surface2); border-radius:3px; height:6px; border:1px solid var(--border); overflow:hidden; }
+    .rank-bar { height:100%; background:linear-gradient(90deg,var(--blue),var(--purple)); border-radius:3px; transition:width 1s ease; }
+  </style>
+</head>
+<body>
+
+  <div class="page-content" style="position:relative;z-index:1">
+    <div class="container">
+      <div class="page-header fade-up">
+        <div class="page-eyebrow">أفضل المتسابقين</div>
+        <h1 class="page-title">🏆 لوحة المتصدرين</h1>
+        <p class="page-desc">أعلى 10 نتائج لكل موضوع</p>
+      </div>
+
+      <div class="tabs fade-up fade-up-1" id="tabs">
+        <button class="tab active" data-subject="html">🧱 HTML</button>
+        <button class="tab" data-subject="css">🎨 CSS</button>
+        <button class="tab" data-subject="javascript">⚡ JavaScript</button>
+      </div>
+
+      <div id="loadingWrap" class="loading-wrap"><div class="spinner"></div><span>جاري التحميل...</span></div>
+      <div id="board" style="display:none"></div>
+    </div>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+<script>
+let leaderboard = null;
+let activeTab   = 'html';
+
+const MEDALS = ['🥇','🥈','🥉'];
+
+function renderBoard(subject) {
+  const boardEl = document.getElementById('board');
+  boardEl.style.display = 'block';
+  boardEl.innerHTML = '';
+
+  const rows = leaderboard[subject] || [];
+  if (!rows.length) {
+    boardEl.innerHTML = '<div class="empty"><div class="empty-icon">🏆</div><div class="empty-title">لا توجد نتائج بعد</div><p style="color:var(--text3);font-size:.85rem">كن أول من يكمل هذا الاختبار!</p></div>';
+    return;
+  }
+
+  rows.forEach((entry, i) => {
+    const row = document.createElement('div');
+    row.className = 'rank-row';
+    row.style.animationDelay = (i * 0.06) + 's';
+
+    const rankEl = document.createElement('div');
+    rankEl.className = `rank-num rank-${i+1}`;
+    rankEl.textContent = MEDALS[i] || `#${i+1}`;   // safe
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'rank-name';
+    nameEl.textContent = entry.playerName;   // textContent — never innerHTML
+
+    const barWrap = document.createElement('div');
+    barWrap.className = 'rank-bar-wrap';
+    const bar = document.createElement('div');
+    bar.className = 'rank-bar';
+    bar.style.width = '0%';
+    setTimeout(() => { bar.style.width = entry.percentage + '%'; }, 100 + i * 60);
+    barWrap.appendChild(bar);
+
+    const scoreEl = document.createElement('div');
+    scoreEl.className = 'rank-score';
+    scoreEl.textContent = `${entry.score}/${entry.total}`;
+
+    const pctEl = document.createElement('span');
+    pctEl.className = 'badge badge-blue';
+    pctEl.textContent = `${entry.percentage}%`;
+
+    row.appendChild(rankEl);
+    row.appendChild(nameEl);
+    row.appendChild(barWrap);
+    row.appendChild(scoreEl);
+    row.appendChild(pctEl);
+    boardEl.appendChild(row);
+  });
+}
+
+async function load() {
+  try {
+    const data  = await API.get('/api/scores/leaderboard');
+    leaderboard = data.leaderboard;
+    document.getElementById('loadingWrap').style.display = 'none';
+    renderBoard(activeTab);
+  } catch (err) {
+    document.getElementById('loadingWrap').innerHTML = `<div class="alert alert-error">⚠️ ${err.message}</div>`;
+  }
+}
+
+document.getElementById('tabs').addEventListener('click', e => {
+  const tab = e.target.closest('[data-subject]');
+  if (!tab) return;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  tab.classList.add('active');
+  activeTab = tab.dataset.subject;
+  if (leaderboard) renderBoard(activeTab);
+});
+
+load();
+</script>
+</body>
+</html>
